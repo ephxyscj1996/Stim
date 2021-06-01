@@ -19,6 +19,7 @@
 #include "../gen/gen_surface_code.h"
 #include "../gen/gen_color_code.h"
 #include "../py/base.pybind.h"
+#include "../simulators/error_fuser.h"
 #include "../py/compiled_detector_sampler.pybind.h"
 #include "../py/compiled_measurement_sampler.pybind.h"
 
@@ -512,6 +513,28 @@ void pybind_circuit(pybind11::module &m) {
                 True
         )DOC").data()
     );
+
+    c.def("error_graph", [](Circuit &self) {
+        ErrorFuser fuser(self.count_qubits(), false, false);
+        fuser.run_circuit(self);
+        fuser.flush();
+        pybind11::list result;
+        for (auto p = fuser.flushed.crbegin(); p != fuser.flushed.crend(); p++) {
+            pybind11::list err;
+            err.append(p->probability);
+            for (const auto &d : p->flipped) {
+                if (is_encoded_detector_id(d)) {
+                    auto d2 = (d + fuser.num_found_detectors - LAST_DETECTOR_ID - 1);
+                    err.append(pybind11::make_tuple("D", d2));
+                } else {
+                    auto l2 = d - FIRST_OBSERVABLE_ID;
+                    err.append(pybind11::make_tuple("L", l2));
+                }
+            }
+            result.append(err);
+        }
+        return result;
+    });
 
     c.def_static(
         "generated",

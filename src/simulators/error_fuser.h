@@ -127,7 +127,6 @@ struct ErrorFuser {
 
     void run_circuit(const Circuit &circuit);
 
-   private:
     void shift_active_detector_ids(int64_t shift);
     void print_flushed(FILE *out) const;
     void flush();
